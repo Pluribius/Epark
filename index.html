@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ParkPay - Your Wireless Parking Solution</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles for Three.js canvas and general layout */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden; /* Prevent horizontal scrolling */
+            /* Background color will be handled by Tailwind dark mode classes on <body> */
+        }
+        #three-js-container {
+            width: 100%;
+            height: 600px; /* Fixed height for the canvas container */
+            background-color: #e2e8f0; /* Slightly darker background for map area (light mode) */
+            border-radius: 0.75rem; /* Rounded corners */
+            overflow: hidden; /* Ensure content stays within rounded corners */
+        }
+        html.dark #three-js-container {
+            background-color: #3b3f46; /* Darker background for map area (dark mode) */
+        }
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%;
+            height: 100%;
+        }
+        /* Ensure the main content takes full height on smaller screens */
+        @media (max-width: 767px) {
+            #main-content-area {
+                flex-direction: column; /* Stack columns on small screens */
+            }
+            #three-js-container {
+                height: 400px; /* Shorter height for map on mobile */
+            }
+        }
+
+        /* Basic styling for the mode toggle switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(22px);
+            -ms-transform: translateX(22px);
+            transform: translateX(22px);
+        }
+    </style>
+    <!-- Google Fonts - Inter (for a modern look) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 text-gray-800 dark:from-gray-900 dark:to-gray-800 dark:text-gray-100 transition-colors duration-500">
+
+    <!-- Header Section -->
+    <header class="bg-white shadow-lg p-6 md:p-8 flex justify-between items-center rounded-b-2xl dark:bg-gray-800 dark:shadow-none transition-colors duration-500">
+        <div class="flex items-center space-x-3">
+            <svg class="w-8 h-8 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm5-1a1 1 0 000 2h4a1 1 0 100-2H8z" clip-rule="evenodd"></path>
+            </svg>
+            <h1 class="text-3xl md:text-4xl font-extrabold text-blue-800 tracking-tight dark:text-blue-300">ParkPay</h1>
+        </div>
+        <nav class="flex items-center space-x-4 md:space-x-6 text-lg font-medium">
+            <ul class="flex space-x-4 md:space-x-6 text-lg font-medium">
+                <li><a href="#features" class="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition duration-300" data-translate="features">Features</a></li>
+                <li><a href="#how-it-works" class="text-gray-600 hover:text-blue-600 dark:text-gray-300 dark:hover:text-blue-400 transition duration-300" data-translate="howItWorks">How it Works</a></li>
+                <li><a href="#" class="px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition duration-300 shadow-md" data-translate="getStarted">Get Started</a></li>
+            </ul>
+
+            <!-- Language Selector -->
+            <select id="language-select" class="ml-4 p-2 rounded-md border border-gray-300 dark:bg-gray-700 dark:border-gray-600 dark:text-gray-100">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+            </select>
+
+            <!-- Light/Dark Mode Toggle -->
+            <label class="toggle-switch ml-4">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="container mx-auto px-4 py-12 md:py-20 text-center">
+        <h2 class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-6 dark:text-gray-50" data-translate="heroTitle">Effortless Parking with <span class="text-blue-600 dark:text-blue-400">ParkPay</span></h2>
+        <p class="text-lg md:text-xl text-gray-700 mb-8 max-w-3xl mx-auto dark:text-gray-200" data-translate="heroDescription">Revolutionizing urban parking with seamless wireless payments and real-time availability. Say goodbye to queues and hello to convenience.</p>
+        <button class="px-8 py-4 bg-gradient-to-r from-blue-600 to-blue-800 text-white text-xl font-semibold rounded-full shadow-lg hover:from-blue-700 hover:to-blue-900 transition duration-300 transform hover:scale-105" data-translate="preRegisterButton">
+            Pre-Register Now!
+        </button>
+    </section>
+
+    <!-- Main Content Area: Map and Advantages -->
+    <section id="features" class="container mx-auto px-4 py-12">
+        <div id="main-content-area" class="flex flex-col md:flex-row gap-8 items-stretch">
+            <!-- Left Column: Three.js Map -->
+            <div class="w-full md:w-2/3 bg-white p-6 rounded-2xl shadow-xl flex flex-col items-center justify-center relative dark:bg-gray-700 dark:shadow-none transition-colors duration-500">
+                <h3 class="text-2xl font-bold text-gray-800 mb-4 text-center dark:text-gray-50" data-translate="caracasMapTitle">Caracas Parking Network</h3>
+                <div id="three-js-container" class="w-full relative">
+                    <!-- Three.js canvas will be injected here -->
+                    <div id="loading-indicator" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 rounded-lg text-blue-600 font-semibold text-lg z-10 dark:bg-gray-800 dark:bg-opacity-80 dark:text-blue-400">
+                        Loading 3D Map...
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-4 text-center dark:text-gray-300" data-translate="mapInteractionHint">Explore fictional ParkPay enabled lots in Caracas. (Drag to rotate, scroll to zoom)</p>
+            </div>
+
+            <!-- Right Column: Advantages -->
+            <div class="w-full md:w-1/3 bg-white p-6 rounded-2xl shadow-xl dark:bg-gray-700 dark:shadow-none transition-colors duration-500">
+                <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center dark:text-gray-50" data-translate="whyParkPayTitle">Why ParkPay?</h3>
+                <ul class="space-y-4 text-lg text-gray-700 dark:text-gray-200">
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <p><strong class="font-semibold text-blue-600 dark:text-blue-400" data-translate="advSpeedTitle">Speed & Efficiency:</strong> <span data-translate="advSpeedDesc">Tap and go! No more fumbling for cash or waiting at payment machines.</span></p>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <p><strong class="font-semibold text-blue-600 dark:text-blue-400" data-translate="advSecureTitle">Secure Payments:</strong> <span data-translate="advSecureDesc">Your financial data is encrypted and protected with cutting-edge NFC technology.</span></p>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <p><strong class="font-semibold text-blue-600 dark:text-blue-400" data-translate="advRealtimeTitle">Real-time Availability:</strong> <span data-translate="advRealtimeDesc">Check parking spot availability directly from your phone before you even leave.</span></p>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <p><strong class="font-semibold text-blue-600 dark:text-blue-400" data-translate="advRecordsTitle">Detailed Records:</strong> <span data-translate="advRecordsDesc">Access your parking history, receipts, and manage your account effortlessly.</span></p>
+                    </li>
+                    <li class="flex items-start">
+                        <svg class="w-6 h-6 text-green-500 mr-3 mt-1 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>
+                        <p><strong class="font-semibold text-blue-600 dark:text-blue-400" data-translate="advEcoTitle">Eco-Friendly:</strong> <span data-translate="advEcoDesc">Reduce paper waste and contribute to a smarter, greener city.</span></p>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section id="how-it-works" class="container mx-auto px-4 py-12 md:py-20 bg-white rounded-2xl shadow-xl mt-12 mb-12 dark:bg-gray-700 dark:shadow-none transition-colors duration-500">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 text-center mb-10 dark:text-gray-50" data-translate="howItWorksTitle">How ParkPay Works</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <!-- Step 1 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">1</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step1Title">Create Your Account</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step1Desc">Sign up on our secure mobile app. Link your preferred payment method (credit card, digital wallet) in minutes. It's fast, easy, and secure.</p>
+            </div>
+            <!-- Step 2 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">2</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step2Title">Order Your NFC Tag</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step2Desc">Receive your sleek, durable ParkPay NFC tag in the mail. Simply attach it to your car's windshield or dashboard.</p>
+            </div>
+            <!-- Step 3 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">3</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step3Title">Drive Into a Lot</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step3Desc">When you enter a ParkPay-enabled parking lot, our sensors detect your NFC tag. The barrier lifts automatically.</p>
+            </div>
+            <!-- Step 4 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">4</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step4Title">Park & Pay Automatically</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step4Desc">Park your car. When you exit, your NFC tag is scanned again, and the parking fee is automatically charged to your linked payment method.</p>
+            </div>
+            <!-- Step 5 -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">5</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step5Title">View History & Manage</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step5Desc">Access your complete parking history, receipts, and manage your account settings anytime through the ParkPay app.</p>
+            </div>
+            <!-- Step 6 (Example of future expansion) -->
+            <div class="bg-gray-50 p-6 rounded-lg shadow-md text-center border border-gray-200 dark:bg-gray-600 dark:border-gray-500">
+                <div class="flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-700 rounded-full mx-auto mb-4 text-3xl font-bold dark:bg-blue-800 dark:text-blue-300">6</div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 dark:text-gray-100" data-translate="step6Title">Future Enhancements</h3>
+                <p class="text-gray-700 dark:text-gray-200" data-translate="step6Desc">Look forward to features like pre-booking, reserved spots, and loyalty rewards coming soon!</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer Section -->
+    <footer class="bg-gray-800 text-white p-8 text-center rounded-t-2xl dark:bg-gray-900 transition-colors duration-500">
+        <p class="text-lg mb-4" data-translate="footerCopy">&copy; 2025 ParkPay. All rights reserved.</p>
+        <div class="flex justify-center space-x-6">
+            <a href="#" class="text-gray-400 hover:text-white transition duration-300" data-translate="privacyPolicy">Privacy Policy</a>
+            <a href="#" class="text-gray-400 hover:text-white transition duration-300" data-translate="termsOfService">Terms of Service</a>
+            <a href="#" class="text-gray-400 hover:text-white transition duration-300" data-translate="contactUs">Contact Us</a>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const threeJsContainer = document.getElementById('three-js-container');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            const languageSelect = document.getElementById('language-select');
+            const darkModeToggle = document.getElementById('dark-mode-toggle');
+            const htmlElement = document.documentElement; // Get the <html> element for dark mode class
+
+            // Set up scene, camera, renderer
+            let scene, camera, renderer;
+            let meshPlane, meshBorder, parkingLots = [];
+
+            // Mouse control variables for Three.js
+            let isDragging = false;
+            let previousMousePosition = {
+                x: 0,
+                y: 0
+            };
+            let currentRotationX = 0;
+            let currentRotationY = 0;
+
+            // Translations object
+            const translations = {
+                en: {
+                    features: "Features",
+                    howItWorks: "How it Works",
+                    getStarted: "Get Started",
+                    heroTitle: "Effortless Parking with ParkPay",
+                    heroDescription: "Revolutionizing urban parking with seamless wireless payments and real-time availability. Say goodbye to queues and hello to convenience.",
+                    preRegisterButton: "Pre-Register Now!",
+                    caracasMapTitle: "Caracas Parking Network",
+                    mapInteractionHint: "Explore fictional ParkPay enabled lots in Caracas. (Drag to rotate, scroll to zoom)",
+                    whyParkPayTitle: "Why ParkPay?",
+                    advSpeedTitle: "Speed & Efficiency:",
+                    advSpeedDesc: "Tap and go! No more fumbling for cash or waiting at payment machines.",
+                    advSecureTitle: "Secure Payments:",
+                    advSecureDesc: "Your financial data is encrypted and protected with cutting-edge NFC technology.",
+                    advRealtimeTitle: "Real-time Availability:",
+                    advRealtimeDesc: "Check parking spot availability directly from your phone before you even leave.",
+                    advRecordsTitle: "Detailed Records:",
+                    advRecordsDesc: "Access your complete parking history, receipts, and manage your account effortlessly.",
+                    advEcoTitle: "Eco-Friendly:",
+                    advEcoDesc: "Reduce paper waste and contribute to a smarter, greener city.",
+                    howItWorksTitle: "How ParkPay Works",
+                    step1Title: "Create Your Account",
+                    step1Desc: "Sign up on our secure mobile app. Link your preferred payment method (credit card, digital wallet) in minutes. It's fast, easy, and secure.",
+                    step2Title: "Order Your NFC Tag",
+                    step2Desc: "Receive your sleek, durable ParkPay NFC tag in the mail. Simply attach it to your car's windshield or dashboard.",
+                    step3Title: "Drive Into a Lot",
+                    step3Desc: "When you enter a ParkPay-enabled parking lot, our sensors detect your NFC tag. The barrier lifts automatically.",
+                    step4Title: "Park & Pay Automatically",
+                    step4Desc: "Park your car. When you exit, your NFC tag is scanned again, and the parking fee is automatically charged to your linked payment method.",
+                    step5Title: "View History & Manage",
+                    step5Desc: "Access your complete parking history, receipts, and manage your account settings anytime through the ParkPay app.",
+                    step6Title: "Future Enhancements",
+                    step6Desc: "Look forward to features like pre-booking, reserved spots, and loyalty rewards coming soon!",
+                    footerCopy: "&copy; 2025 ParkPay. All rights reserved.",
+                    privacyPolicy: "Privacy Policy",
+                    termsOfService: "Terms of Service",
+                    contactUs: "Contact Us"
+                },
+                es: {
+                    features: "Características",
+                    howItWorks: "Cómo Funciona",
+                    getStarted: "Empezar",
+                    heroTitle: "Estacionamiento Sin Esfuerzo con ParkPay",
+                    heroDescription: "Revolucionando el estacionamiento urbano con pagos inalámbricos sin interrupciones y disponibilidad en tiempo real. ¡Dile adiós a las colas y hola a la comodidad!",
+                    preRegisterButton: "¡Pre-Regístrate Ahora!",
+                    caracasMapTitle: "Red de Estacionamiento en Caracas",
+                    mapInteractionHint: "Explora estacionamientos ficticios habilitados con ParkPay en Caracas. (Arrastra para rotar, rueda para hacer zoom)",
+                    whyParkPayTitle: "¿Por qué ParkPay?",
+                    advSpeedTitle: "Velocidad y Eficiencia:",
+                    advSpeedDesc: "¡Toca y listo! Se acabaron las búsquedas de efectivo o las esperas en las máquinas de pago.",
+                    advSecureTitle: "Pagos Seguros:",
+                    advSecureDesc: "Tus datos financieros están cifrados y protegidos con tecnología NFC de vanguardia.",
+                    advRealtimeTitle: "Disponibilidad en Tiempo Real:",
+                    advRealtimeDesc: "Verifica la disponibilidad de estacionamiento directamente desde tu teléfono antes de salir.",
+                    advRecordsTitle: "Registros Detallados:",
+                    advRecordsDesc: "Accede a tu historial de estacionamiento completo, recibos y administra tu cuenta sin esfuerzo.",
+                    advEcoTitle: "Respetuoso con el Medio Ambiente:",
+                    advEcoDesc: "Reduce el desperdicio de papel y contribuye a una ciudad más inteligente y ecológica.",
+                    howItWorksTitle: "¿Cómo Funciona ParkPay?",
+                    step1Title: "Crea Tu Cuenta",
+                    step1Desc: "Regístrate en nuestra aplicación móvil segura. Vincula tu método de pago preferido (tarjeta de crédito, billetera digital) en minutos. Es rápido, fácil y seguro.",
+                    step2Title: "Solicita Tu Etiqueta NFC",
+                    step2Desc: "Recibe tu elegante y duradera etiqueta NFC ParkPay por correo. Simplemente fíjalo al parabrisas o salpicadero de tu coche.",
+                    step3Title: "Entra a un Estacionamiento",
+                    step3Desc: "Cuando ingresas a un estacionamiento habilitado con ParkPay, nuestros sensores detectan tu etiqueta NFC. La barrera se levanta automáticamente.",
+                    step4Title: "Estaciona y Paga Automáticamente",
+                    step4Desc: "Estaciona tu coche. Al salir, tu etiqueta NFC se escanea de nuevo y la tarifa de estacionamiento se carga automáticamente a tu método de pago vinculado.",
+                    step5Title: "Ver Historial y Administrar",
+                    step5Desc: "Accede a tu historial de estacionamiento completo, recibos y administra la configuración de tu cuenta en cualquier momento a través de la aplicación ParkPay.",
+                    step6Title: "Mejoras Futuras",
+                    step6Desc: "¡Próximamente, funciones como reserva previa, lugares reservados y recompensas por lealtad!",
+                    footerCopy: "&copy; 2025 ParkPay. Todos los derechos reservados.",
+                    privacyPolicy: "Política de Privacidad",
+                    termsOfService: "Términos de Servicio",
+                    contactUs: "Contáctanos"
+                }
+            };
+
+            // Function to apply translations
+            function applyLanguage(lang) {
+                const elementsToTranslate = document.querySelectorAll('[data-translate]');
+                elementsToTranslate.forEach(element => {
+                    const key = element.getAttribute('data-translate');
+                    if (translations[lang] && translations[lang][key]) {
+                        element.innerHTML = translations[lang][key]; // Use innerHTML for cases with strong/span tags inside
+                    }
+                });
+                // Update specific elements that need special handling (e.g., placeholder text or title)
+                document.title = translations[lang] && translations[lang].heroTitle ? translations[lang].heroTitle.replace(/<.*?>/g, '') + " - Your Wireless Parking Solution" : "ParkPay - Your Wireless Parking Solution";
+            }
+
+            // Function to set the theme
+            function setTheme(theme) {
+                if (theme === 'dark') {
+                    htmlElement.classList.add('dark');
+                    darkModeToggle.checked = true;
+                } else {
+                    htmlElement.classList.remove('dark');
+                    darkModeToggle.checked = false;
+                }
+                localStorage.setItem('theme', theme);
+            }
+
+            // Initialize Three.js scene
+            function initThreeJS() {
+                // Remove loading indicator
+                loadingIndicator.style.display = 'none';
+
+                scene = new THREE.Scene();
+                // Scene background color will adapt to light/dark mode via CSS.
+                // For Three.js objects, we'll use specific materials.
+
+                // Camera
+                camera = new THREE.PerspectiveCamera(75, threeJsContainer.clientWidth / threeJsContainer.clientHeight, 0.1, 1000);
+                camera.position.set(0, 10, 20); // Slightly elevated view
+                camera.lookAt(0, 0, 0);
+
+                // Renderer
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(threeJsContainer.clientWidth, threeJsContainer.clientHeight);
+                renderer.setPixelRatio(window.devicePixelRatio); // Improve rendering quality on high-DPI screens
+                threeJsContainer.appendChild(renderer.domElement);
+
+                // Lighting
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.7); // Soft white light
+                scene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.6);
+                directionalLight.position.set(5, 10, 7); // Position of the light source
+                directionalLight.castShadow = true; // Enable shadow casting
+                scene.add(directionalLight);
+
+                // Caracas "Map" Plane
+                const planeGeometry = new THREE.PlaneGeometry(30, 30); // Represents the city area
+                const planeMaterial = new THREE.MeshLambertMaterial({ color: 0x82b7c4 }); // Greenish-blue for "Caracas"
+                meshPlane = new THREE.Mesh(planeGeometry, planeMaterial);
+                meshPlane.rotation.x = -Math.PI / 2; // Rotate to be flat
+                meshPlane.receiveShadow = true; // Enable receiving shadows
+                scene.add(meshPlane);
+
+                // "City Border" (a slightly raised border around the plane)
+                const borderGeometry = new THREE.BoxGeometry(32, 0.5, 32);
+                const borderMaterial = new THREE.MeshLambertMaterial({ color: 0x6a9ba8 });
+                meshBorder = new THREE.Mesh(borderGeometry, borderMaterial);
+                meshBorder.position.y = -0.25; // Sit slightly below the plane
+                scene.add(meshBorder);
+
+                // Fictional Parking Lots (simple red boxes)
+                const parkingLotGeometry = new THREE.BoxGeometry(1.5, 1, 1.5);
+                const parkingLotMaterial = new THREE.MeshLambertMaterial({ color: 0xe53e3e }); // Red for parking lots
+
+                const parkingLotPositions = [
+                    { x: 5, z: 5 },
+                    { x: -7, z: 3 },
+                    { x: 0, z: -8 },
+                    { x: 8, z: -2 },
+                    { x: -4, z: -6 },
+                    { x: 2, z: 9 }
+                ];
+
+                parkingLotPositions.forEach(pos => {
+                    const lot = new THREE.Mesh(parkingLotGeometry, parkingLotMaterial);
+                    lot.position.set(pos.x, 0.5, pos.z); // Slightly above the plane
+                    lot.castShadow = true; // Enable casting shadows
+                    scene.add(lot);
+                    parkingLots.push(lot);
+
+                    // Add a small cylinder beacon on top of each lot
+                    const beaconGeometry = new THREE.CylinderGeometry(0.2, 0.2, 1, 8);
+                    const beaconMaterial = new THREE.MeshBasicMaterial({ color: 0x4299e1 }); // Blue for beacon
+                    const beacon = new THREE.Mesh(beaconGeometry, beaconMaterial);
+                    beacon.position.set(pos.x, 1.5, pos.z); // Above the lot
+                    scene.add(beacon);
+                    parkingLots.push(beacon); // Add beacon to array to be animated
+                });
+
+                // Add event listeners for mouse interaction
+                threeJsContainer.addEventListener('mousedown', onMouseDown, false);
+                threeJsContainer.addEventListener('mouseup', onMouseUp, false);
+                threeJsContainer.addEventListener('mousemove', onMouseMove, false);
+                threeJsContainer.addEventListener('wheel', onMouseWheel, false); // For zooming
+
+                // Handle window resizing
+                window.addEventListener('resize', onWindowResize, false);
+            }
+
+            function onWindowResize() {
+                // Update camera aspect ratio and renderer size
+                camera.aspect = threeJsContainer.clientWidth / threeJsContainer.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(threeJsContainer.clientWidth, threeJsContainer.clientHeight);
+            }
+
+            function onMouseDown(event) {
+                isDragging = true;
+                previousMousePosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            function onMouseUp() {
+                isDragging = false;
+            }
+
+            function onMouseMove(event) {
+                if (!isDragging) return;
+
+                const deltaX = event.clientX - previousMousePosition.x;
+                const deltaY = event.clientY - previousMousePosition.y;
+
+                // Rotate around Y-axis for horizontal drag
+                currentRotationY += deltaX * 0.005;
+                // Rotate around X-axis for vertical drag, clamping to avoid flipping
+                currentRotationX += deltaY * 0.005;
+                currentRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, currentRotationX)); // Clamp rotation
+
+                // Apply rotation to the entire scene (or a group containing all objects)
+                // For simplicity, we'll rotate the camera around the origin.
+                const radius = camera.position.distanceTo(new THREE.Vector3(0, 0, 0)); // Distance from camera to origin
+                camera.position.x = radius * Math.sin(currentRotationY) * Math.cos(currentRotationX);
+                camera.position.y = radius * Math.sin(currentRotationX);
+                camera.position.z = radius * Math.cos(currentRotationY) * Math.cos(currentRotationX);
+                camera.lookAt(0, 0, 0); // Always look at the center of the "map"
+
+                previousMousePosition = {
+                    x: event.clientX,
+                    y: event.clientY
+                };
+            }
+
+            function onMouseWheel(event) {
+                event.preventDefault(); // Prevent page scrolling
+
+                const zoomSpeed = 0.1;
+                // Zoom in/out based on scroll direction
+                camera.position.addScaledVector(camera.position.clone().normalize(), -event.deltaY * zoomSpeed * 0.01);
+
+                // Clamp zoom to prevent going too far or too close
+                const minZoom = 5;
+                const maxZoom = 50;
+                const currentDistance = camera.position.distanceTo(new THREE.Vector3(0,0,0));
+                if (currentDistance < minZoom) {
+                    camera.position.setLength(minZoom);
+                } else if (currentDistance > maxZoom) {
+                    camera.position.setLength(maxZoom);
+                }
+                camera.lookAt(0, 0, 0);
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // Animate parking lot beacons to pulse slightly
+                const time = Date.now() * 0.001;
+                parkingLots.forEach(lot => {
+                    // Only pulse the beacons (cylinders)
+                    if (lot.geometry.type === 'CylinderGeometry') {
+                        lot.scale.y = 1 + Math.sin(time * 5) * 0.1; // Pulsing scale
+                        lot.position.y = 1.5 + Math.sin(time * 5) * 0.1; // Slight bobbing
+                    }
+                });
+
+                renderer.render(scene, camera);
+            }
+
+            // Event Listeners for Language and Dark Mode
+            languageSelect.addEventListener('change', (event) => {
+                const selectedLang = event.target.value;
+                applyLanguage(selectedLang);
+                localStorage.setItem('language', selectedLang); // Save preference
+            });
+
+            darkModeToggle.addEventListener('change', () => {
+                if (darkModeToggle.checked) {
+                    setTheme('dark');
+                } else {
+                    setTheme('light');
+                }
+            });
+
+            // Initialize preferences on page load
+            const savedLanguage = localStorage.getItem('language') || 'en'; // Default to English
+            languageSelect.value = savedLanguage; // Set dropdown
+            applyLanguage(savedLanguage); // Apply initial language
+
+            const savedTheme = localStorage.getItem('theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'); // Default to system preference
+            setTheme(savedTheme); // Apply initial theme
+
+            // Start the Three.js scene only after the window has fully loaded
+            window.onload = function() {
+                initThreeJS();
+                animate();
+            };
+        });
+    </script>
+</body>
+</html>
